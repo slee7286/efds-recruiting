@@ -1,0 +1,23 @@
+target_cycles:
+  - 2027
+
+role_families:
+  include: []
+  exclude: []
+
+locations:
+  include: []
+  exclude: []
+
+companies:
+  include: []
+  exclude: []
+
+research:
+  enabled_categories:
+    - careers
+    - recruiting_cycle
+    - interview_process
+    - news
+    - technology
+    - research

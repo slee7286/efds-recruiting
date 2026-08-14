@@ -1,0 +1,68 @@
+[storage]
+local_data_dir = "~/.recruiting-assistant"
+
+[shared]
+enabled = true
+transport = "api"
+api_base_url = ""
+database_url = ""
+
+[api]
+environment = "development"
+allowed_hosts = ["localhost", "127.0.0.1"]
+allowed_origins = []
+docs_enabled = true
+
+[browser]
+headless = false
+default_mode = "autofill"
+screenshots = true
+redact_sensitive_screenshots = true
+screenshot_retention_days = 30
+failed_run_retention_days = 90
+slow_mo_ms = 0
+timeout_seconds = 30
+profile_dir = ""
+screenshots = true
+redact_sensitive_screenshots = true
+
+[ai]
+default_provider = "chatgpt"
+
+[browser]
+headless = false
+
+[app]
+host = "127.0.0.1"
+port = 8765
+open_browser = false
+
+[sync]
+auto_pull_shared = true
+auto_push_private = false
+offline_mode = false
+
+[email]
+sync_interval_minutes = 15
+storage_mode = "text_and_metadata"
+google_oauth_client_id = ""
+google_oauth_client_secret = ""
+google_oauth_client_secret_file = ""
+lookback_days = 60
+
+[reminders]
+deadline_24h = true
+deadline_3h = true
+interview_24h = true
+interview_1h = true
+
+[prep]
+daily_minutes = 120
+
+[background]
+email_sync = true
+shared_sync = true
+reminders = true
+active_job_refresh = true
+job_alerts = true
+interval_minutes = 30

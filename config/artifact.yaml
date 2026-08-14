@@ -1,0 +1,8 @@
+tex_engine: pdflatex
+docx_provenance_appendix: false
+default_cover_letter_salutation: "Dear Hiring Team,"
+role_templates:
+  finance: finance
+  quant: quant
+  engineering: software
+  default: general

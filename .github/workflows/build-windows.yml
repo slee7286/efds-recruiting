@@ -1,0 +1,36 @@
+name: Windows package
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+      - name: Verify source
+        run: |
+          python -m ruff check src tests
+          python -m pytest -q
+      - name: Build executable
+        run: pyinstaller packaging/recruiting_assistant.spec
+      - name: Packaged version smoke test
+        run: dist\\RecruitingAssistant.exe --version
+      - name: Build release manifest
+        run: python scripts/build_release_manifest.py dist\\RecruitingAssistant.exe --output dist\\release-manifest.json
+      - name: Upload executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: recruiting-assistant-windows
+          path: |
+            dist/RecruitingAssistant.exe
+            dist/release-manifest.json

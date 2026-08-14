@@ -1,0 +1,11 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+COPY . .
+RUN pip install --no-cache-dir .
+
+ENV API_ENV=production
+ENV API_DOCS_ENABLED=false
+ENV API_ALLOWED_HOSTS=localhost,127.0.0.1
+
+CMD ["recruiting", "api", "serve", "--host", "0.0.0.0", "--port", "8080"]
