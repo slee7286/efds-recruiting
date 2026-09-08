@@ -485,6 +485,29 @@ def research_export(company_slug: str) -> None:
         typer.echo(f"exported {export_company(session, company, get_settings())}")
 
 
+@research_app.command("opportunity-digest")
+def research_opportunity_digest(
+    input_path: Path = typer.Argument(..., help="Local JSON capture manifest."),  # noqa: B008
+    output_dir: Path = typer.Argument(..., help="Directory for the JSON and Markdown digest."),  # noqa: B008
+    overwrite: bool = typer.Option(False, "--overwrite", help="Replace existing digest files."),
+) -> None:
+    """Render a local synthetic opportunity capture without services or a database."""
+
+    from quant_recruiting.opportunity_digest import DigestInputError, run_fixture_digest
+
+    try:
+        json_path, markdown_path, result = run_fixture_digest(
+            input_path,
+            output_dir,
+            overwrite=overwrite,
+        )
+    except DigestInputError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"digest: {result['digest_id']}")
+    typer.echo(f"json: {json_path}")
+    typer.echo(f"markdown: {markdown_path}")
+
+
 @ai_app.command("prepare-company")
 def ai_prepare_company(company_slug: str, full: bool = False) -> None:
     with private_session_scope() as session:

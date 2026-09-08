@@ -1,0 +1,336 @@
+{
+  "advisory_ranking": {
+    "candidate_specific_fit_assessed": false,
+    "items": [
+      {
+        "identity": "[\"synthetic\",\"example-board\",\"external\",\"role-001\"]",
+        "reasons": [
+          "firm:known",
+          "role:known",
+          "location:known",
+          "deadline:known",
+          "application_url:known"
+        ],
+        "score": 5
+      },
+      {
+        "identity": "[\"synthetic\",\"example-board\",\"external\",\"role-002\"]",
+        "reasons": [
+          "firm:known",
+          "role:known",
+          "location:known",
+          "deadline:conflict",
+          "application_url:unknown"
+        ],
+        "score": 3
+      }
+    ],
+    "rubric_id": "efds-opportunity-advisory-v1"
+  },
+  "coverage": {
+    "complete_source_count": 1,
+    "excluded_record_count": 1,
+    "expected_source_count": 2,
+    "included_record_count": 3,
+    "source_ids": [
+      "fixture-failed",
+      "fixture-primary"
+    ],
+    "supplied_source_count": 2
+  },
+  "digest_id": "431e11d7d6f693355ac19c5d96e2c1e506e9e362a88971eb48dc70f8e11c6ef2",
+  "exclusions": [
+    {
+      "raw_payload_sha256": "7e68728e1c5670059b8de4569d5113d8ae704d63fd27d16c50fb37a0a979bbbd",
+      "reason": "outside_target_role",
+      "record_id": "irrelevant-001",
+      "source_id": "fixture-primary"
+    }
+  ],
+  "opportunities": [
+    {
+      "board_id": "example-board",
+      "content_sha256": "0b7ed5692e90934906fbd64165bc854022dd70b334b00f500c8d13d6ddd9caf5",
+      "external_id": "role-001",
+      "facts": {
+        "application_url": {
+          "evidence": [
+            {
+              "field": "application_url",
+              "locator": "/application_url",
+              "quote": "https://apply.example.invalid/example-board/role-001",
+              "record_id": "accepted-001",
+              "source_id": "fixture-primary"
+            },
+            {
+              "field": "application_url",
+              "locator": "/application_url",
+              "quote": "https://apply.example.invalid/example-board/role-001",
+              "record_id": "accepted-duplicate",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "https://apply.example.invalid/example-board/role-001"
+        },
+        "deadline": {
+          "evidence": [
+            {
+              "field": "deadline",
+              "locator": "/deadline",
+              "quote": "2026-10-01",
+              "record_id": "accepted-001",
+              "source_id": "fixture-primary"
+            },
+            {
+              "field": "deadline",
+              "locator": "/deadline",
+              "quote": "2026-10-01",
+              "record_id": "accepted-duplicate",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "2026-10-01"
+        },
+        "eligibility": {
+          "evidence": [],
+          "reason": "not_reported",
+          "status": "unknown",
+          "value": null
+        },
+        "firm": {
+          "evidence": [
+            {
+              "field": "firm",
+              "locator": "/firm",
+              "quote": "Example Quant Labs",
+              "record_id": "accepted-001",
+              "source_id": "fixture-primary"
+            },
+            {
+              "field": "firm",
+              "locator": "/firm",
+              "quote": "Example Quant Labs",
+              "record_id": "accepted-duplicate",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "Example Quant Labs"
+        },
+        "job_url": {
+          "evidence": [
+            {
+              "field": "job_url",
+              "locator": "/job_url",
+              "quote": "https://jobs.example.invalid/example-board/role-001",
+              "record_id": "accepted-001",
+              "source_id": "fixture-primary"
+            },
+            {
+              "field": "job_url",
+              "locator": "/job_url",
+              "quote": "https://jobs.example.invalid/example-board/role-001",
+              "record_id": "accepted-duplicate",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "https://jobs.example.invalid/example-board/role-001"
+        },
+        "location": {
+          "evidence": [
+            {
+              "field": "location",
+              "locator": "/location",
+              "quote": "London",
+              "record_id": "accepted-001",
+              "source_id": "fixture-primary"
+            },
+            {
+              "field": "location",
+              "locator": "/location",
+              "quote": "London",
+              "record_id": "accepted-duplicate",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "London"
+        },
+        "role": {
+          "evidence": [
+            {
+              "field": "role",
+              "locator": "/role",
+              "quote": "Research Intern",
+              "record_id": "accepted-001",
+              "source_id": "fixture-primary"
+            },
+            {
+              "field": "role",
+              "locator": "/role",
+              "quote": "Research Intern",
+              "record_id": "accepted-duplicate",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "Research Intern"
+        }
+      },
+      "identity": "[\"synthetic\",\"example-board\",\"external\",\"role-001\"]",
+      "provider": "synthetic",
+      "source_references": [
+        {
+          "board_id": "example-board",
+          "normalized_facts_sha256": "43caffb15572651fe5cd7333cd5ff6bf7e9c1f6a159e625b06a74871bbd9efb1",
+          "observed_at_utc": "2026-09-08T00:00:00Z",
+          "provider": "synthetic",
+          "raw_payload_sha256": "9edbff51e0801dc811a1841fcb4b230204d4448bda63d487de4d4caebb9ccdf7",
+          "record_id": "accepted-duplicate",
+          "source_id": "fixture-primary",
+          "source_url": "https://jobs.example.invalid/example-board"
+        },
+        {
+          "board_id": "example-board",
+          "normalized_facts_sha256": "492a2c89f031ebe782dbd2e5fdf2948165fb1a16862d98ba5ea0b493b21d8720",
+          "observed_at_utc": "2026-09-08T00:00:00Z",
+          "provider": "synthetic",
+          "raw_payload_sha256": "0e7ce556f6b863a49b3d7ab407f32ad18c6d07524d3fb5bde9fc1fa2b12d8f57",
+          "record_id": "accepted-001",
+          "source_id": "fixture-primary",
+          "source_url": "https://jobs.example.invalid/example-board"
+        }
+      ]
+    },
+    {
+      "board_id": "example-board",
+      "content_sha256": "03d352d2a21dd1b8807589a8cbe1d6d3d03cf63644d0c55475258c6849eadf22",
+      "external_id": "role-002",
+      "facts": {
+        "application_url": {
+          "evidence": [],
+          "reason": "not_reported",
+          "status": "unknown",
+          "value": null
+        },
+        "deadline": {
+          "claims": [
+            {
+              "evidence": [
+                {
+                  "field": "deadline",
+                  "locator": "/deadline_claims/0",
+                  "quote": "2026-10-15",
+                  "record_id": "conflict-001",
+                  "source_id": "fixture-primary"
+                }
+              ],
+              "value": "2026-10-15"
+            },
+            {
+              "evidence": [
+                {
+                  "field": "deadline",
+                  "locator": "/deadline_claims/1",
+                  "quote": "2026-11-01",
+                  "record_id": "conflict-001",
+                  "source_id": "fixture-primary"
+                }
+              ],
+              "value": "2026-11-01"
+            }
+          ],
+          "status": "conflict",
+          "value": null
+        },
+        "eligibility": {
+          "evidence": [],
+          "reason": "not_reported",
+          "status": "unknown",
+          "value": null
+        },
+        "firm": {
+          "evidence": [
+            {
+              "field": "firm",
+              "locator": "/firm",
+              "quote": "Example Quant Labs",
+              "record_id": "conflict-001",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "Example Quant Labs"
+        },
+        "job_url": {
+          "evidence": [
+            {
+              "field": "job_url",
+              "locator": "/job_url",
+              "quote": "https://jobs.example.invalid/example-board/role-002",
+              "record_id": "conflict-001",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "https://jobs.example.invalid/example-board/role-002"
+        },
+        "location": {
+          "evidence": [
+            {
+              "field": "location",
+              "locator": "/location",
+              "quote": "Cambridge",
+              "record_id": "conflict-001",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "Cambridge"
+        },
+        "role": {
+          "evidence": [
+            {
+              "field": "role",
+              "locator": "/role",
+              "quote": "Quantitative Developer",
+              "record_id": "conflict-001",
+              "source_id": "fixture-primary"
+            }
+          ],
+          "status": "known",
+          "value": "Quantitative Developer"
+        }
+      },
+      "identity": "[\"synthetic\",\"example-board\",\"external\",\"role-002\"]",
+      "provider": "synthetic",
+      "source_references": [
+        {
+          "board_id": "example-board",
+          "normalized_facts_sha256": "2fb4dd92e72d5f2df041a776ef4254655c7768f5a3d1f5805473a52014fb0fa4",
+          "observed_at_utc": "2026-09-08T00:00:00Z",
+          "provider": "synthetic",
+          "raw_payload_sha256": "1288e7bb0604aac4fe0c1a2895099c77532642b0185e7a6dad16a396942fb8b7",
+          "record_id": "conflict-001",
+          "source_id": "fixture-primary",
+          "source_url": "https://jobs.example.invalid/example-board"
+        }
+      ]
+    }
+  ],
+  "parser_version": "local-opportunity-parser-v1",
+  "policy_id": "efds-opportunity-policy-v1",
+  "review_status": "pending",
+  "schema_version": "efds-opportunity-digest-v1",
+  "source_errors": [
+    {
+      "code": "capture_failed",
+      "message": "synthetic source timeout recorded without retry",
+      "source_id": "fixture-failed"
+    }
+  ],
+  "status": "incomplete"
+}
