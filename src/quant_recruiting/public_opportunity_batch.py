@@ -27,16 +27,17 @@ import httpx
 from bs4 import BeautifulSoup
 
 from quant_recruiting.ats import adapter_for
-from quant_recruiting.jobs import classify_role, extract_internship_cycle
+from quant_recruiting.jobs import JobPosting, classify_role, extract_internship_cycle
 from quant_recruiting.opportunity_digest import (
     build_opportunity_digest,
     render_digest_json,
     render_digest_markdown,
     run_fixture_digest,
 )
+from quant_recruiting.utils import canonicalize_url
 
 SCHEMA_VERSION = "efds-public-opportunity-batch-v1"
-PARSER_VERSION = "efds-public-opportunity-parser-v1"
+PARSER_VERSION = "efds-public-opportunity-parser-v2"
 POLICY_ID = "efds-public-opportunity-policy-v1"
 UTC = UTC
 _RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
@@ -62,6 +63,7 @@ _RELEVANT_ROLE_FAMILIES = {
     "trading",
     "research",
 }
+_OFFICIAL_ADAPTERS = {"drw_official", "jane_official", "optiver_official"}
 
 
 class PublicBatchError(ValueError):
@@ -471,6 +473,143 @@ def _clean_description(value: str) -> str:
     return BeautifulSoup(unescape(value), "html.parser").get_text(" ", strip=True)
 
 
+def _official_posting(source: PublicSource, payload: dict[str, Any]) -> JobPosting:
+    """Convert one verified official-page record to the existing posting shape.
+
+    These adapters intentionally consume only fields present in the captured
+    official response.  They do not fetch detail pages or manufacture missing
+    deadline, eligibility, or programme-year facts.
+    """
+
+    adapter = source.adapter
+    if adapter == "drw_official":
+        slug = payload.get("slug")
+        url_value = payload.get("url") or payload.get("job_url")
+        if not url_value and isinstance(slug, str) and slug.strip():
+            url_value = urljoin(source.endpoint_url.rstrip("/") + "/", slug.strip())
+        location = payload.get("locations")
+        if isinstance(location, list):
+            location = "; ".join(str(item) for item in location)
+        description = payload.get("description") or payload.get("job_description") or ""
+        title = payload.get("job_title") or payload.get("title")
+        # DRW's public listing contains repeated numeric IDs for distinct
+        # slugs; the slug is the stable listing identity for this source.
+        external_id = payload.get("slug") or payload.get("id") or payload.get("internal_job_id")
+    elif adapter == "jane_official":
+        identifier = payload.get("id")
+        url_value = urljoin(
+            "https://www.janestreet.com/join-jane-street/position/",
+            f"{identifier}/" if identifier is not None else "",
+        )
+        city = payload.get("city")
+        if type(city) is str:
+            location = {"NYC": "New York City", "LDN": "London", "HKG": "Hong Kong"}.get(
+                city, city
+            )
+        else:
+            location = city
+        description = " ".join(
+            str(value)
+            for value in (
+                payload.get("overview") or "",
+                f"Availability: {payload['availability']}"
+                if payload.get("availability")
+                else "",
+                f"Category: {payload['category']}" if payload.get("category") else "",
+                f"Duration: {payload['duration']}" if payload.get("duration") else "",
+            )
+            if value
+        )
+        title = payload.get("position")
+        external_id = identifier
+    elif adapter == "optiver_official":
+        url_value = urljoin(source.endpoint_url, str(payload.get("href") or ""))
+        location = payload.get("location")
+        description = " ".join(
+            str(value)
+            for value in (
+                f"Experience: {payload['experience']}"
+                if payload.get("experience")
+                else "",
+                f"Domain: {payload['domain']}" if payload.get("domain") else "",
+            )
+            if value
+        )
+        title = payload.get("title")
+        external_id = payload.get("componentID") or payload.get("href")
+    else:  # pragma: no cover - guarded by the caller
+        raise PublicBatchError(f"unsupported official adapter: {adapter}")
+
+    if type(title) is not str or not title.strip():
+        raise PublicBatchError(f"{adapter} record has no title")
+    if type(url_value) is not str or not url_value.strip():
+        raise PublicBatchError(f"{adapter} record has no application URL")
+    return JobPosting(
+        url=canonicalize_url(url_value),
+        title=title.strip(),
+        description=_clean_description(description if isinstance(description, str) else ""),
+        date_posted=None,
+        valid_through=None,
+        employment_type=(
+            str(payload.get("availability"))
+            if adapter == "jane_official" and payload.get("availability")
+            else str(payload.get("experience"))
+            if adapter == "optiver_official" and payload.get("experience")
+            else None
+        ),
+        location_text=str(location).strip() if location else None,
+        external_id=str(external_id) if external_id is not None else None,
+        structured_data=payload,
+        raw_html=json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8"),
+    )
+
+
+def _source_jobs(
+    source: PublicSource, body: bytes
+) -> tuple[list[dict[str, Any]], str, str | None]:
+    """Parse one captured board response and report completeness separately."""
+
+    if source.adapter == "drw_official":
+        match = re.search(
+            rb'<script[^>]+id=["\']__NEXT_DATA__["\'][^>]*>(.*?)</script>',
+            body,
+            flags=re.DOTALL,
+        )
+        if match is None:
+            raise PublicBatchError("DRW listing has no __NEXT_DATA__ payload")
+        try:
+            payload = json.loads(match.group(1))
+            jobs = payload["props"]["pageProps"]["jobData"]["en"]
+        except (KeyError, TypeError, json.JSONDecodeError) as exc:
+            raise PublicBatchError("DRW listing has malformed __NEXT_DATA__ payload") from exc
+        if not isinstance(jobs, list):
+            raise PublicBatchError("DRW jobData.en is not an array")
+        return [job for job in jobs if isinstance(job, dict)], "complete", None
+
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise PublicBatchError(f"official response is not valid JSON: {exc}") from exc
+
+    if source.adapter == "jane_official":
+        if not isinstance(payload, list):
+            raise PublicBatchError("Jane Street jobs payload is not an array")
+        return [job for job in payload if isinstance(job, dict)], "complete", None
+    if source.adapter == "optiver_official":
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise PublicBatchError("Optiver jobs payload has no items array")
+        jobs = [job for job in payload["items"] if isinstance(job, dict)]
+        total = payload.get("totalCount")
+        if type(total) is int and total > len(jobs):
+            return (
+                jobs,
+                "truncated",
+                f"official Optiver endpoint returned {len(jobs)} of {total} listed roles",
+            )
+        return jobs, "complete", None
+    raise PublicBatchError(f"unsupported source adapter: {source.adapter}")
+
+
 def _programme_year(text: str) -> tuple[str | None, str | None]:
     year_match = re.search(r"\b(20(?:2[5-9]|3\d))\b", text)
     if year_match:
@@ -544,7 +683,9 @@ def _claim(
     quote = (
         value
         if isinstance(value, str)
-        else json.dumps(value, separators=(",", ":"), sort_keys=True)
+        else json.dumps(
+            value, ensure_ascii=False, separators=(",", ":"), sort_keys=True
+        )
     )
     return {
         "value": value,
@@ -565,19 +706,28 @@ def _record_from_posting(
     payload: dict[str, Any],
     config: Any,
     source_meta: dict[str, Any],
+    record_id_suffix: str = "",
 ) -> dict[str, Any]:
-    adapter = adapter_for(source.adapter)
-    posting = adapter.normalize_job(payload, config)
+    if source.adapter in _OFFICIAL_ADAPTERS:
+        posting = _official_posting(source, payload)
+    else:
+        adapter = adapter_for(source.adapter)
+        posting = adapter.normalize_job(payload, config)
     fallback_id = hashlib.sha256(posting.url.encode()).hexdigest()[:12]
-    record_id = f"{source.source_id}-{posting.external_id or fallback_id}"
+    record_id = f"{source.source_id}-{posting.external_id or fallback_id}{record_id_suffix}"
     description = _clean_description(posting.description)
     cycle, cycle_wording = extract_internship_cycle(f"{posting.title} {description}")
     if cycle is None:
         cycle, cycle_wording = _programme_year(f"{posting.title} {description}")
     role_family, _confidence = classify_role(posting.title, description)
     text = f"{posting.title} {description}".lower()
-    is_insight = "insight" in text
-    is_internship = "intern" in text or "placement" in text
+    if source.adapter in {"jane_official", "optiver_official"}:
+        explicit_program = (posting.employment_type or "").lower()
+        is_internship = "intern" in explicit_program or "placement" in explicit_program
+        is_insight = "insight" in explicit_program
+    else:
+        is_insight = "insight" in text
+        is_internship = "intern" in text or "placement" in text
     location = posting.location_text
     location_lower = location.lower() if location else ""
     uk_terms = ("london", "united kingdom", "uk", "england", "scotland", "wales", "edinburgh")
@@ -681,6 +831,27 @@ def _record_from_posting(
     return result
 
 
+def _unique_record(
+    source: PublicSource,
+    payload: dict[str, Any],
+    config: Any,
+    source_meta: dict[str, Any],
+    used_ids: set[str],
+    index: int,
+) -> dict[str, Any]:
+    suffix = ""
+    attempt = 0
+    while True:
+        record = _record_from_posting(
+            source, payload, config, source_meta, record_id_suffix=suffix
+        )
+        if record["record_id"] not in used_ids:
+            used_ids.add(record["record_id"])
+            return record
+        attempt += 1
+        suffix = f"-duplicate-{index}-{attempt}"
+
+
 def _collection_report(
     manifest: PublicBatchManifest,
     fetcher: _BoundedFetcher,
@@ -759,23 +930,34 @@ def collect_public_batch(
                 official_meta = _write_capture(source_dir, "official", official)
                 board = fetcher.fetch(source.endpoint_url, set(source.allowed_hosts))
                 board_meta = _write_capture(source_dir, "board-page-1", board)
-                try:
-                    payload = json.loads(board.body.decode("utf-8"))
-                except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                    raise PublicBatchError(f"ATS response is not valid JSON: {exc}") from exc
-                if source.provider == "greenhouse":
-                    raw_jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
-                elif source.provider == "ashby":
-                    raw_jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
+                if source.adapter in _OFFICIAL_ADAPTERS:
+                    raw_jobs, capture_status, capture_error = _source_jobs(
+                        source, board.body
+                    )
                 else:
-                    raw_jobs = payload if isinstance(payload, list) else []
-                if not isinstance(raw_jobs, list):
-                    raise PublicBatchError("ATS jobs payload is not an array")
-                if len(raw_jobs) > manifest.limits.max_pages_per_source * 500:
-                    source_base["capture_status"] = "truncated"
-                    source_base["error"] = "record count exceeded declared pagination ceiling"
-                else:
-                    source_base["capture_status"] = "complete"
+                    try:
+                        payload = json.loads(board.body.decode("utf-8"))
+                    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                        raise PublicBatchError(f"ATS response is not valid JSON: {exc}") from exc
+                    if source.provider in {"greenhouse", "ashby"}:
+                        raw_jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
+                    else:
+                        raw_jobs = payload if isinstance(payload, list) else []
+                    if not isinstance(raw_jobs, list):
+                        raise PublicBatchError("ATS jobs payload is not an array")
+                    capture_status = (
+                        "truncated"
+                        if len(raw_jobs) > manifest.limits.max_pages_per_source * 500
+                        else "complete"
+                    )
+                    capture_error = (
+                        "record count exceeded declared pagination ceiling"
+                        if capture_status == "truncated"
+                        else None
+                    )
+                source_base["capture_status"] = capture_status
+                if capture_error:
+                    source_base["error"] = capture_error
                 config = SimpleNamespace(
                     board_identifier=source.board_id, board_url=source.endpoint_url
                 )
@@ -783,6 +965,7 @@ def collect_public_batch(
                     "official": official_meta,
                     "board": board_meta,
                 }
+                used_record_ids: set[str] = set()
                 for index, payload_item in enumerate(raw_jobs):
                     if not isinstance(payload_item, dict):
                         source_base["records"].append(
@@ -795,7 +978,14 @@ def collect_public_batch(
                         )
                         continue
                     source_base["records"].append(
-                        _record_from_posting(source, payload_item, config, capture_meta)
+                        _unique_record(
+                            source,
+                            payload_item,
+                            config,
+                            capture_meta,
+                            used_record_ids,
+                            index,
+                        )
                     )
             except (PublicBatchError, httpx.HTTPError, ValueError) as exc:
                 source_base["capture_status"] = "failed"
@@ -876,32 +1066,42 @@ def replay_saved_captures(
                 sources.append(previous_source)
             continue
         try:
-            payload = json.loads(board_path.read_bytes().decode("utf-8"))
-        except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            board_bytes = board_path.read_bytes()
+            if source.adapter in _OFFICIAL_ADAPTERS:
+                raw_jobs, _capture_status, _capture_error = _source_jobs(source, board_bytes)
+            else:
+                payload = json.loads(board_bytes.decode("utf-8"))
+                if source.provider in {"greenhouse", "ashby"}:
+                    raw_jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
+                else:
+                    raw_jobs = payload if isinstance(payload, list) else []
+                if not isinstance(raw_jobs, list):
+                    raise PublicBatchError(
+                        f"saved ATS jobs payload is not an array for {source.source_id}"
+                    )
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, PublicBatchError) as exc:
             raise PublicBatchError(
-                f"saved ATS capture is unusable for {source.source_id}: {exc}"
+                f"saved source capture is unusable for {source.source_id}: {exc}"
             ) from exc
-        if source.provider in {"greenhouse", "ashby"}:
-            raw_jobs = payload.get("jobs", []) if isinstance(payload, dict) else []
-        else:
-            raw_jobs = payload if isinstance(payload, list) else []
-        if not isinstance(raw_jobs, list):
-            raise PublicBatchError(f"saved ATS jobs payload is not an array for {source.source_id}")
         official_meta = _read_json(source_dir / "official.metadata.json")
         board_meta = _read_json(source_dir / "board-page-1.metadata.json")
         official_meta["body_file"] = "official.bin"
         board_meta["body_file"] = "board-page-1.bin"
         config = SimpleNamespace(board_identifier=source.board_id, board_url=source.endpoint_url)
-        records = [
-            _record_from_posting(
-                source,
-                payload_item,
-                config,
-                {"official": official_meta, "board": board_meta},
-            )
-            for payload_item in raw_jobs
-            if isinstance(payload_item, dict)
-        ]
+        used_record_ids: set[str] = set()
+        records = []
+        for index, payload_item in enumerate(raw_jobs):
+            if isinstance(payload_item, dict):
+                records.append(
+                    _unique_record(
+                        source,
+                        payload_item,
+                        config,
+                        {"official": official_meta, "board": board_meta},
+                        used_record_ids,
+                        index,
+                    )
+                )
         rebuilt = {
             "source_id": source.source_id,
             "provider": source.provider,

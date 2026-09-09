@@ -69,6 +69,50 @@ def _posting_payload(*, jobs: list[dict[str, object]]) -> bytes:
     return json.dumps({"jobs": jobs}, sort_keys=True).encode()
 
 
+def _official_manifest() -> dict[str, object]:
+    def source(source_id: str, host: str, endpoint: str, adapter: str) -> dict[str, object]:
+        return {
+            "source_id": source_id,
+            "firm": source_id.title(),
+            "official_careers_url": f"https://{host}/careers",
+            "endpoint_url": endpoint,
+            "provider": adapter,
+            "board_id": source_id,
+            "allowed_hosts": [host],
+            "board_evidence": "Synthetic official page identifies the public source endpoint.",
+            "adapter": adapter,
+            "pagination": "bounded synthetic response",
+            "observed_at_utc": "2026-09-09T10:00:00Z",
+        }
+
+    return {
+        "schema_version": "efds-public-opportunity-batch-v1",
+        "batch_id": "official-adapter-test",
+        "scope": "synthetic official source adapters",
+        "limits": CollectionLimits(max_sources=3, max_requests=6).__dict__,
+        "sources": [
+            source(
+                "drw",
+                "drw.example.test",
+                "https://drw.example.test/work-at-drw/listings",
+                "drw_official",
+            ),
+            source(
+                "jane-street",
+                "jane.example.test",
+                "https://jane.example.test/jobs/main.json",
+                "jane_official",
+            ),
+            source(
+                "optiver",
+                "optiver.example.test",
+                "https://optiver.example.test/en/api/v1/jobs",
+                "optiver_official",
+            ),
+        ],
+    }
+
+
 def _job(
     *,
     job_id: int = 1,
@@ -140,6 +184,115 @@ def test_successful_capture_preserves_bytes_evidence_and_unknowns(tmp_path: Path
     digest_input = json.loads((tmp_path / "batch" / "digest-input.json").read_text())
     board_meta = digest_input["sources"][0]["records"][0]["raw_payload"]["capture"]["board"]
     assert board_meta["body_sha256"] == hashlib.sha256(capture.read_bytes()).hexdigest()
+
+
+def test_official_source_adapters_preserve_complete_and_partial_statuses(tmp_path: Path) -> None:
+    manifest = _official_manifest()
+    drw_body = (
+        b'<script id="__NEXT_DATA__">'
+        + json.dumps(
+            {
+                "props": {
+                    "pageProps": {
+                        "jobData": {
+                            "en": [
+                                {
+                                    "id": 7,
+                                    "job_title": "Quantitative Research Intern",
+                                    "locations": ["London"],
+                                    "slug": "quantitative-research-intern-7",
+                                    "career_categories": ["Campus"],
+                                },
+                                {
+                                    "id": 7,
+                                    "job_title": "Software Developer Intern",
+                                    "locations": ["London"],
+                                    "slug": "software-developer-intern-7",
+                                    "career_categories": ["Campus"],
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        ).encode()
+        + b"</script>"
+    )
+    jane_body = json.dumps(
+        [
+            {
+                "id": 8,
+                "position": "Machine Learning Researcher, Summer Internship",
+                "city": "LDN",
+                "availability": "Summer Internship",
+                "category": "Trading, Research, and Machine Learning",
+                "overview": (
+                    "Students graduating in 2027 are encouraged to apply. "
+                    "Bachelor’s degree preferred."
+                ),
+            },
+            {
+                "id": 10,
+                "position": "Software Engineer",
+                "city": "LDN",
+                "availability": "Full-Time: Experienced",
+                "category": "Technology",
+                "overview": (
+                    "This role works with interns and experienced engineers; "
+                    "insight into systems is useful."
+                ),
+            },
+        ]
+    ).encode()
+    optiver_body = json.dumps(
+        {
+            "totalCount": 166,
+            "items": [
+                {
+                    "componentID": 9,
+                    "title": "2027 Shanghai Performance Researcher Summer Internship",
+                    "location": "Shanghai",
+                    "experience": "Internship",
+                    "domain": "Trading",
+                    "href": "/join-us/jobs/trading/shanghai/researcher/",
+                }
+            ],
+        }
+    ).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "drw.example.test":
+            content = drw_body if "listings" in request.url.path else b"official"
+            return httpx.Response(200, content=content)
+        if request.url.host == "jane.example.test":
+            content = jane_body if request.url.path.endswith("main.json") else b"official"
+            return httpx.Response(200, content=content)
+        content = optiver_body if request.url.path.endswith("jobs") else b"official"
+        return httpx.Response(200, content=content)
+
+    batch = _run(tmp_path, handler, manifest=manifest)
+    statuses = {item["source_id"]: item["status"] for item in batch["report"]["sources"]}
+    assert statuses == {"drw": "complete", "jane-street": "complete", "optiver": "truncated"}
+    assert batch["digest"]["status"] == "incomplete"
+    assert {item["facts"]["firm"]["value"] for item in batch["digest"]["opportunities"]} == {
+        "Drw",
+        "Jane-Street",
+    }
+    assert len(batch["digest"]["opportunities"]) == 3
+    assert any(error["code"] == "capture_truncated" for error in batch["digest"]["source_errors"])
+    assert all(
+        item["facts"]["application_url"]["value"].startswith("https://")
+        for item in batch["digest"]["opportunities"]
+    )
+    assert all(
+        "/work-at-drw/listings/" in item["facts"]["application_url"]["value"]
+        for item in batch["digest"]["opportunities"]
+        if item["facts"]["firm"]["value"] == "Drw"
+    )
+    records = json.loads((tmp_path / "batch" / "digest-input.json").read_text())["sources"][0][
+        "records"
+    ]
+    assert len({record["record_id"] for record in records}) == len(records)
 
 
 def test_compatible_eligibility_dimensions_do_not_become_a_digest_conflict(
