@@ -459,11 +459,12 @@ def _write_capture(root: Path, name: str, response: _ResponseCapture) -> dict[st
     return metadata
 
 
-def _sentence(text: str, terms: tuple[str, ...]) -> str | None:
-    for part in re.split(r"(?<=[.!?])\s+", text):
-        if any(term in part.lower() for term in terms):
-            return " ".join(part.split())
-    return None
+def _sentences(text: str, terms: tuple[str, ...]) -> list[str]:
+    return [
+        " ".join(part.split())
+        for part in re.split(r"(?<=[.!?])\s+", text)
+        if any(term in part.lower() for term in terms)
+    ]
 
 
 def _clean_description(value: str) -> str:
@@ -485,27 +486,31 @@ def _eligibility_claims(text: str) -> list[dict[str, Any]]:
         "sponsorship": ("sponsor", "visa", "sponsorship"),
     }
     for dimension, terms in dimensions.items():
-        sentence = _sentence(text, terms)
-        if sentence is None:
-            continue
-        lowered = sentence.lower()
-        status = (
-            "required"
-            if any(word in lowered for word in ("must", "required", "eligible"))
-            else "unknown"
-        )
-        if any(
-            word in lowered for word in ("no sponsorship", "without sponsorship", "not required")
-        ):
-            status = "not_required"
-        value = {"dimension": dimension, "status": status, "detail": sentence}
-        claims.append(value)
+        for sentence in _sentences(text, terms):
+            lowered = sentence.lower()
+            if any(
+                word in lowered
+                for word in ("not eligible", "ineligible", "not permitted")
+            ):
+                status = "ineligible"
+            elif any(
+                word in lowered
+                for word in ("no sponsorship", "without sponsorship", "not required")
+            ):
+                status = "not_required"
+            else:
+                status = (
+                    "required"
+                    if any(word in lowered for word in ("must", "required", "eligible"))
+                    else "unknown"
+                )
+            claims.append({"dimension": dimension, "status": status, "detail": sentence})
     return claims
 
 
 def _primary_eligibility_claim(
     claims: list[dict[str, Any]],
-) -> tuple[int, dict[str, Any]] | None:
+) -> list[tuple[int, dict[str, Any]]]:
     """Choose the single v1 eligibility fact while retaining all claims in raw input.
 
     Graduation is the most useful first-class digest fact for this batch.  Work
@@ -517,7 +522,7 @@ def _primary_eligibility_claim(
 
     priority = {"graduation": 0, "work_authorization": 1, "sponsorship": 2}
     if not claims:
-        return None
+        return []
 
     def sort_key(item: tuple[int, dict[str, Any]]) -> tuple[int, int]:
         dimension = item[1].get("dimension")
@@ -525,7 +530,12 @@ def _primary_eligibility_claim(
             dimension = ""
         return priority.get(dimension, 99), item[0]
 
-    return min(enumerate(claims), key=sort_key)
+    primary_dimension = min(enumerate(claims), key=sort_key)[1].get("dimension")
+    return [
+        (index, claim)
+        for index, claim in enumerate(claims)
+        if claim.get("dimension") == primary_dimension
+    ]
 
 
 def _claim(
@@ -647,8 +657,7 @@ def _record_from_posting(
         ]
     eligibility_claims = raw_payload["derived"]["eligibility_claims"]
     primary_eligibility = _primary_eligibility_claim(eligibility_claims)
-    if primary_eligibility is not None:
-        index, value = primary_eligibility
+    if primary_eligibility:
         facts["eligibility"] = [
             _claim(
                 value,
@@ -657,6 +666,7 @@ def _record_from_posting(
                 "eligibility",
                 f"/derived/eligibility_claims/{index}",
             )
+            for index, value in primary_eligibility
         ]
     result: dict[str, Any] = {
         "record_id": record_id,

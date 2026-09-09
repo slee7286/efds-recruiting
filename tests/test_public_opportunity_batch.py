@@ -174,6 +174,42 @@ def test_compatible_eligibility_dimensions_do_not_become_a_digest_conflict(
     assert eligibility["evidence"][0]["locator"] == "/derived/eligibility_claims/0"
 
 
+def test_same_dimension_eligibility_contradictions_remain_visible(
+    tmp_path: Path,
+) -> None:
+    board_body = _posting_payload(
+        jobs=[
+            _job(
+                description=(
+                    "London, UK. Students graduating in 2027 are eligible. "
+                    "Students graduating in 2028 are not eligible."
+                )
+            )
+        ]
+    )
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=board_body if "boards-api" in request.url.host else b"careers",
+        )
+
+    batch = _run(tmp_path, handler)
+    record = json.loads((tmp_path / "batch" / "digest-input.json").read_text())[
+        "sources"
+    ][0]["records"][0]
+    claims = record["raw_payload"]["derived"]["eligibility_claims"]
+    assert len(claims) == 2
+    assert all(claim["dimension"] == "graduation" for claim in claims)
+    eligibility = batch["digest"]["opportunities"][0]["facts"]["eligibility"]
+    assert eligibility["status"] == "conflict"
+    assert {
+        reference["locator"]
+        for claim in eligibility["claims"]
+        for reference in claim["evidence"]
+    } == {"/derived/eligibility_claims/0", "/derived/eligibility_claims/1"}
+
+
 def test_saved_capture_replay_can_write_a_new_revision(tmp_path: Path) -> None:
     board_body = _posting_payload(jobs=[_job()])
 
