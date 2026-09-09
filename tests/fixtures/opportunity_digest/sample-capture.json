@@ -1,0 +1,340 @@
+{
+  "schema_version": "efds-opportunity-capture-v1",
+  "parser_version": "local-opportunity-parser-v1",
+  "policy_id": "efds-opportunity-policy-v1",
+  "expected_sources": [
+    "fixture-failed",
+    "fixture-primary"
+  ],
+  "sources": [
+    {
+      "source_id": "fixture-failed",
+      "provider": "synthetic",
+      "board_id": "failure-board",
+      "source_url": "https://failed.example.invalid/jobs",
+      "observed_at_utc": "2026-09-08T00:00:00Z",
+      "capture_status": "failed",
+      "error": "synthetic source timeout recorded without retry",
+      "records": []
+    },
+    {
+      "source_id": "fixture-primary",
+      "provider": "synthetic",
+      "board_id": "example-board",
+      "source_url": "https://jobs.example.invalid/example-board",
+      "observed_at_utc": "2026-09-08T00:00:00Z",
+      "capture_status": "complete",
+      "records": [
+        {
+          "record_id": "accepted-001",
+          "record_status": "included",
+          "external_id": "role-001",
+          "raw_payload": {
+            "firm": "Example Quant Labs",
+            "role": "Research Intern",
+            "title": "Research Intern",
+            "location": "London",
+            "job_id": "role-001",
+            "deadline": "2026-10-01",
+            "job_url": "https://jobs.example.invalid/example-board/role-001",
+            "application_url": "https://apply.example.invalid/example-board/role-001"
+          },
+          "facts": {
+            "firm": [
+              {
+                "value": "Example Quant Labs",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-001",
+                    "field": "firm",
+                    "locator": "/firm",
+                    "quote": "Example Quant Labs"
+                  }
+                ]
+              }
+            ],
+            "role": [
+              {
+                "value": "Research Intern",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-001",
+                    "field": "role",
+                    "locator": "/role",
+                    "quote": "Research Intern"
+                  }
+                ]
+              }
+            ],
+            "location": [
+              {
+                "value": "London",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-001",
+                    "field": "location",
+                    "locator": "/location",
+                    "quote": "London"
+                  }
+                ]
+              }
+            ],
+            "deadline": [
+              {
+                "value": "2026-10-01",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-001",
+                    "field": "deadline",
+                    "locator": "/deadline",
+                    "quote": "2026-10-01"
+                  }
+                ]
+              }
+            ],
+            "job_url": [
+              {
+                "value": "https://jobs.example.invalid/example-board/role-001",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-001",
+                    "field": "job_url",
+                    "locator": "/job_url",
+                    "quote": "https://jobs.example.invalid/example-board/role-001"
+                  }
+                ]
+              }
+            ],
+            "application_url": [
+              {
+                "value": "https://apply.example.invalid/example-board/role-001",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-001",
+                    "field": "application_url",
+                    "locator": "/application_url",
+                    "quote": "https://apply.example.invalid/example-board/role-001"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "record_id": "accepted-duplicate",
+          "record_status": "included",
+          "external_id": "role-001",
+          "raw_payload": {
+            "firm": "Example Quant Labs",
+            "role": "Research Intern",
+            "title": "Research Intern",
+            "location": "London",
+            "job_id": "role-001",
+            "deadline": "2026-10-01",
+            "job_url": "https://jobs.example.invalid/example-board/role-001",
+            "application_url": "https://apply.example.invalid/example-board/role-001",
+            "capture": "duplicate-source-row"
+          },
+          "facts": {
+            "firm": [
+              {
+                "value": "Example Quant Labs",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-duplicate",
+                    "field": "firm",
+                    "locator": "/firm",
+                    "quote": "Example Quant Labs"
+                  }
+                ]
+              }
+            ],
+            "role": [
+              {
+                "value": "Research Intern",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-duplicate",
+                    "field": "role",
+                    "locator": "/role",
+                    "quote": "Research Intern"
+                  }
+                ]
+              }
+            ],
+            "location": [
+              {
+                "value": "London",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-duplicate",
+                    "field": "location",
+                    "locator": "/location",
+                    "quote": "London"
+                  }
+                ]
+              }
+            ],
+            "deadline": [
+              {
+                "value": "2026-10-01",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-duplicate",
+                    "field": "deadline",
+                    "locator": "/deadline",
+                    "quote": "2026-10-01"
+                  }
+                ]
+              }
+            ],
+            "job_url": [
+              {
+                "value": "https://jobs.example.invalid/example-board/role-001",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-duplicate",
+                    "field": "job_url",
+                    "locator": "/job_url",
+                    "quote": "https://jobs.example.invalid/example-board/role-001"
+                  }
+                ]
+              }
+            ],
+            "application_url": [
+              {
+                "value": "https://apply.example.invalid/example-board/role-001",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "accepted-duplicate",
+                    "field": "application_url",
+                    "locator": "/application_url",
+                    "quote": "https://apply.example.invalid/example-board/role-001"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "record_id": "conflict-001",
+          "record_status": "included",
+          "external_id": "role-002",
+          "raw_payload": {
+            "firm": "Example Quant Labs",
+            "role": "Quantitative Developer",
+            "title": "Quantitative Developer",
+            "location": "Cambridge",
+            "job_id": "role-002",
+            "deadline_claims": ["2026-10-15", "2026-11-01"],
+            "job_url": "https://jobs.example.invalid/example-board/role-002"
+          },
+          "facts": {
+            "firm": [
+              {
+                "value": "Example Quant Labs",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "conflict-001",
+                    "field": "firm",
+                    "locator": "/firm",
+                    "quote": "Example Quant Labs"
+                  }
+                ]
+              }
+            ],
+            "role": [
+              {
+                "value": "Quantitative Developer",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "conflict-001",
+                    "field": "role",
+                    "locator": "/role",
+                    "quote": "Quantitative Developer"
+                  }
+                ]
+              }
+            ],
+            "location": [
+              {
+                "value": "Cambridge",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "conflict-001",
+                    "field": "location",
+                    "locator": "/location",
+                    "quote": "Cambridge"
+                  }
+                ]
+              }
+            ],
+            "deadline": [
+              {
+                "value": "2026-10-15",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "conflict-001",
+                    "field": "deadline",
+                    "locator": "/deadline_claims/0",
+                    "quote": "2026-10-15"
+                  }
+                ]
+              },
+              {
+                "value": "2026-11-01",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "conflict-001",
+                    "field": "deadline",
+                    "locator": "/deadline_claims/1",
+                    "quote": "2026-11-01"
+                  }
+                ]
+              }
+            ],
+            "job_url": [
+              {
+                "value": "https://jobs.example.invalid/example-board/role-002",
+                "evidence": [
+                  {
+                    "source_id": "fixture-primary",
+                    "record_id": "conflict-001",
+                    "field": "job_url",
+                    "locator": "/job_url",
+                    "quote": "https://jobs.example.invalid/example-board/role-002"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "record_id": "irrelevant-001",
+          "record_status": "irrelevant",
+          "exclusion_reason": "outside_target_role",
+          "raw_payload": {
+            "title": "Office Administrator"
+          }
+        }
+      ]
+    }
+  ]
+}
