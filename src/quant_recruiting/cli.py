@@ -508,6 +508,60 @@ def research_opportunity_digest(
     typer.echo(f"markdown: {markdown_path}")
 
 
+@research_app.command("public-opportunity-batch")
+def research_public_opportunity_batch(
+    manifest_path: Path = typer.Argument(..., help="Frozen public-source batch manifest."),  # noqa: B008
+    output_dir: Path = typer.Argument(..., help="New durable directory for captures and digest."),  # noqa: B008
+    replay_input: Path | None = typer.Option(  # noqa: B008
+        None,  # noqa: B008
+        "--replay-input",
+        help="Replay a saved digest-input.json without network access.",
+    ),
+    overwrite: bool = typer.Option(  # noqa: B008
+        False, "--overwrite", help="Use an empty output directory only."
+    ),
+    replay_captures: bool = typer.Option(  # noqa: B008
+        False,
+        "--replay-captures",
+        help="Rebuild from saved batch response bytes without network access.",
+    ),
+    capture_source: Path | None = typer.Option(  # noqa: B008
+        None,
+        "--capture-source",
+        help="Original saved batch to replay into output_dir.",
+    ),
+) -> None:
+    """Collect one bounded public batch, or replay its saved input offline."""
+
+    from quant_recruiting.public_opportunity_batch import (
+        PublicBatchError,
+        collect_public_batch,
+        replay_public_batch,
+        replay_saved_captures,
+    )
+
+    try:
+        if replay_captures and replay_input is not None:
+            raise PublicBatchError("choose only one replay mode")
+        if replay_captures:
+            batch = replay_saved_captures(capture_source or output_dir, output_dir=output_dir)
+            json_path = Path(batch["output_dir"]) / "digest" / "opportunity-digest.json"
+            markdown_path = Path(batch["output_dir"]) / "digest" / "opportunity-digest.md"
+            typer.echo(f"replayed batch: {batch['digest']['digest_id']}")
+        elif replay_input is not None:
+            json_path, markdown_path, result = replay_public_batch(replay_input, output_dir)
+            typer.echo(f"replay digest: {result['digest_id']}")
+        else:
+            batch = collect_public_batch(manifest_path, output_dir, overwrite=overwrite)
+            json_path = Path(batch["output_dir"]) / "digest" / "opportunity-digest.json"
+            markdown_path = Path(batch["output_dir"]) / "digest" / "opportunity-digest.md"
+            typer.echo(f"batch: {batch['report']['batch_id']}")
+        typer.echo(f"json: {json_path}")
+        typer.echo(f"markdown: {markdown_path}")
+    except PublicBatchError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+
 @ai_app.command("prepare-company")
 def ai_prepare_company(company_slug: str, full: bool = False) -> None:
     with private_session_scope() as session:
