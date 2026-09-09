@@ -508,6 +508,41 @@ def research_opportunity_digest(
     typer.echo(f"markdown: {markdown_path}")
 
 
+@research_app.command("opportunity-review-template")
+def research_opportunity_review_template(
+    pack_dir: Path = typer.Argument(..., help="Consolidated opportunity review pack."),  # noqa: B008
+    output_dir: Path = typer.Argument(..., help="New directory for the unreviewed template."),  # noqa: B008
+) -> None:
+    """Create an all-unreviewed offline annotation template for a consolidated pack."""
+
+    from quant_recruiting.opportunity_review import OpportunityReviewError, create_review_template
+
+    try:
+        output = create_review_template(pack_dir, output_dir)
+    except OpportunityReviewError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"template: {output / 'annotations.json'}")
+    typer.echo(f"summary: {output / 'review-summary.md'}")
+
+
+@research_app.command("opportunity-review-apply")
+def research_opportunity_review_apply(
+    pack_dir: Path = typer.Argument(..., help="Consolidated opportunity review pack."),  # noqa: B008
+    annotations_path: Path = typer.Argument(..., help="Human-edited annotations.json."),  # noqa: B008
+    output_dir: Path = typer.Argument(..., help="New directory for the applied review revision."),  # noqa: B008
+) -> None:
+    """Validate and publish a complete offline human review revision."""
+
+    from quant_recruiting.opportunity_review import OpportunityReviewError, apply_review_annotations
+
+    try:
+        output = apply_review_annotations(pack_dir, annotations_path, output_dir)
+    except OpportunityReviewError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"review: {output / 'annotations.json'}")
+    typer.echo(f"summary: {output / 'review-summary.md'}")
+
+
 @research_app.command("public-opportunity-batch")
 def research_public_opportunity_batch(
     manifest_path: Path = typer.Argument(..., help="Frozen public-source batch manifest."),  # noqa: B008

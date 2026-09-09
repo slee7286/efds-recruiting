@@ -1,0 +1,38 @@
+{
+  "basis": "synthetic fixture",
+  "input_file_sha256": {
+    "synthetic-batch": {
+      "digest-input.json": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "pack_id": "synthetic-pack",
+  "rows": [
+    {
+      "board_id": "synthetic-board",
+      "digest_id": "digest-1",
+      "evidence_references": [],
+      "external_id": "role-1",
+      "normalized_facts_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "original_batch": "synthetic-batch",
+      "provider": "synthetic",
+      "raw_payload_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "record_id": "synthetic-record-1",
+      "review_id": "efds-review-synthetic-source-synthetic-board-role-1",
+      "source_id": "synthetic-source"
+    },
+    {
+      "board_id": "synthetic-board",
+      "digest_id": "digest-1",
+      "evidence_references": [],
+      "external_id": "role-2",
+      "normalized_facts_sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "original_batch": "synthetic-batch",
+      "provider": "synthetic",
+      "raw_payload_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "record_id": "synthetic-record-2",
+      "review_id": "efds-review-synthetic-source-synthetic-board-role-2",
+      "source_id": "synthetic-source"
+    }
+  ],
+  "schema_version": "efds-consolidated-opportunity-provenance-v1"
+}
