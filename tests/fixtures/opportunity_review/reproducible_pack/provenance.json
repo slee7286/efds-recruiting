@@ -1,0 +1,150 @@
+{
+  "basis": "synthetic reproducible provenance",
+  "code_identity": {
+    "module": "quant_recruiting.opportunity_review_pack",
+    "module_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+    "schema_version": "efds-opportunity-review-pack-v1"
+  },
+  "commands": {
+    "database_calls": 0,
+    "network_requests": 0,
+    "offline": "synthetic fixture"
+  },
+  "human_review_boundary": "Human decisions remain unreviewed.",
+  "input_hashes": {
+    "pack": {
+      "opportunities.csv": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "verification": {
+      "verification-observations.json": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  },
+  "input_pack": {
+    "directory_name": "synthetic-consolidated-pack",
+    "file_sha256": {
+      "opportunities.csv": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "pack_id": "synthetic-consolidated-pack"
+  },
+  "pack_id": "synthetic-reproducible-pack",
+  "reconciliation": {
+    "directory_name": "synthetic-reconciliation",
+    "file_sha256": {
+      "reconciliation-manifest.json": "5555555555555555555555555555555555555555555555555555555555555555"
+    }
+  },
+  "review_revision": {
+    "revision_id": null,
+    "status": "not_supplied"
+  },
+  "rows": [
+    {
+      "corrected_observation": {
+        "review_id": "efds-review-repro-source-repro-board-role-1"
+      },
+      "correction": null,
+      "evidence_references": [
+        {
+          "file": "responses/role-1.html",
+          "input": "verification",
+          "locator": "visible_text:title",
+          "quote": "Research Intern",
+          "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+        }
+      ],
+      "historical_pack_row": {
+        "board_id": "repro-board",
+        "external_id": "repro-role-1",
+        "provider": "repro",
+        "record_id": "repro-record-1",
+        "review_id": "efds-review-repro-source-repro-board-role-1",
+        "source_id": "repro-source"
+      },
+      "historical_source_identity": {
+        "board_id": "repro-board",
+        "digest_id": "7777777777777777777777777777777777777777777777777777777777777777",
+        "evidence_references": [
+          {
+            "file": "responses/role-1.html",
+            "input": "verification",
+            "locator": "visible_text:title",
+            "quote": "Research Intern",
+            "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+          }
+        ],
+        "external_id": "repro-role-1",
+        "normalized_facts_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+        "original_batch": "repro-batch",
+        "provider": "repro",
+        "raw_payload_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+        "record_id": "repro-record-1",
+        "review_id": "efds-review-repro-source-repro-board-role-1",
+        "source_id": "repro-source"
+      },
+      "human_annotation": null,
+      "human_decision": "unreviewed",
+      "review_id": "efds-review-repro-source-repro-board-role-1",
+      "verification_observation": {
+        "review_id": "efds-review-repro-source-repro-board-role-1"
+      }
+    },
+    {
+      "corrected_observation": {
+        "review_id": "efds-review-repro-source-repro-board-role-2"
+      },
+      "correction": null,
+      "evidence_references": [
+        {
+          "file": "responses/role-2.html",
+          "input": "verification",
+          "locator": "visible_text:title",
+          "quote": "Software Intern",
+          "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "historical_pack_row": {
+        "board_id": "repro-board",
+        "external_id": "repro-role-2",
+        "provider": "repro",
+        "record_id": "repro-record-2",
+        "review_id": "efds-review-repro-source-repro-board-role-2",
+        "source_id": "repro-source"
+      },
+      "historical_source_identity": {
+        "board_id": "repro-board",
+        "digest_id": "7777777777777777777777777777777777777777777777777777777777777777",
+        "evidence_references": [
+          {
+            "file": "responses/role-2.html",
+            "input": "verification",
+            "locator": "visible_text:title",
+            "quote": "Software Intern",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "external_id": "repro-role-2",
+        "normalized_facts_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "original_batch": "repro-batch",
+        "provider": "repro",
+        "raw_payload_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "record_id": "repro-record-2",
+        "review_id": "efds-review-repro-source-repro-board-role-2",
+        "source_id": "repro-source"
+      },
+      "human_annotation": null,
+      "human_decision": "unreviewed",
+      "review_id": "efds-review-repro-source-repro-board-role-2",
+      "verification_observation": {
+        "review_id": "efds-review-repro-source-repro-board-role-2"
+      }
+    }
+  ],
+  "schema_version": "efds-reproducible-opportunity-provenance-v1",
+  "verification_run": {
+    "directory_name": "synthetic-verification",
+    "file_sha256": {
+      "verification-observations.json": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    },
+    "run_id": "synthetic-verification-run"
+  }
+}

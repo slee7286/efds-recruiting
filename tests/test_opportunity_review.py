@@ -17,6 +17,7 @@ from quant_recruiting.opportunity_review import (
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PACK = ROOT / "tests" / "fixtures" / "opportunity_review" / "pack"
+REPRODUCIBLE_FIXTURE_PACK = ROOT / "tests" / "fixtures" / "opportunity_review" / "reproducible_pack"
 
 
 def _read(path: Path) -> dict[str, object]:
@@ -30,6 +31,13 @@ def _write(path: Path, value: object) -> None:
 def _template(tmp_path: Path) -> tuple[Path, dict[str, object]]:
     output = tmp_path / "template"
     create_review_template(FIXTURE_PACK, output)
+    document = _read(output / "annotations.json")
+    return output, document
+
+
+def _reproducible_template(tmp_path: Path) -> tuple[Path, dict[str, object]]:
+    output = tmp_path / "reproducible-template"
+    create_review_template(REPRODUCIBLE_FIXTURE_PACK, output)
     document = _read(output / "annotations.json")
     return output, document
 
@@ -103,6 +111,77 @@ def test_template_is_complete_and_unreviewed(tmp_path: Path) -> None:
         assert annotation["deadline"]["status"] == "unreviewed"
         assert annotation["eligibility"]["status"] == "unreviewed"
     assert "unreviewed" in (output / "review-summary.md").read_text(encoding="utf-8")
+
+
+def test_reproducible_pack_supports_template_apply_and_revision(tmp_path: Path) -> None:
+    template_dir, template = _reproducible_template(tmp_path)
+    assert len(template["annotations"]) == 2
+    assert all(
+        annotation["availability"]["status"] == "unreviewed"
+        for annotation in template["annotations"]
+    )
+    source_identity = template["annotations"][0]["source_identity"]
+    assert source_identity["provenance_schema"] == "efds-reproducible-opportunity-provenance-v1"
+    assert (
+        source_identity["provenance_row"]["historical_source_identity"]["record_id"]
+        == "repro-record-1"
+    )
+    edited = _edited(tmp_path, _recorded(template))
+    first = apply_review_annotations(
+        REPRODUCIBLE_FIXTURE_PACK, edited, tmp_path / "reproducible-review-r1"
+    )
+    applied = _read(first / "annotations.json")
+    assert applied["parent_revision"] == template["revision_id"]
+    assert applied["annotations"][0]["availability"]["status"] == "open"
+    assert _read(template_dir / "annotations.json")["annotations"][0]["reviewer"] is None
+
+
+@pytest.mark.parametrize(
+    ("mutation", "message"),
+    [
+        ("missing_required", "missing historical_source_identity"),
+        ("conflicting_identity", "historical source identity .* identity mismatch"),
+        ("unknown_schema", "unsupported opportunity pack provenance schema"),
+        ("mixed_schema", "unknown input_file_sha256"),
+    ],
+)
+def test_reproducible_provenance_rejects_malformed_or_ambiguous_inputs(
+    tmp_path: Path, mutation: str, message: str
+) -> None:
+    copied = tmp_path / mutation
+    shutil.copytree(REPRODUCIBLE_FIXTURE_PACK, copied)
+    provenance = _read(copied / "provenance.json")
+    row = provenance["rows"][0]
+    if mutation == "missing_required":
+        del row["historical_source_identity"]
+    elif mutation == "conflicting_identity":
+        row["historical_source_identity"]["record_id"] = "foreign-record"
+    elif mutation == "unknown_schema":
+        provenance["schema_version"] = "efds-unknown-provenance-v9"
+    else:
+        provenance["input_file_sha256"] = {}
+    _write(copied / "provenance.json", provenance)
+    with pytest.raises(OpportunityReviewError, match=message):
+        create_review_template(copied, tmp_path / f"{mutation}-output")
+    assert not (tmp_path / f"{mutation}-output").exists()
+
+
+def test_reproducible_pack_binding_rejects_changed_evidence_and_is_deterministic(
+    tmp_path: Path,
+) -> None:
+    first_dir, first = _reproducible_template(tmp_path / "first")
+    second_dir, second = _reproducible_template(tmp_path / "second")
+    for name in ("annotations.json", "review-summary.md", "review-manifest.json"):
+        assert (first_dir / name).read_bytes() == (second_dir / name).read_bytes()
+    edited = _edited(tmp_path, _recorded(first))
+    changed_pack = tmp_path / "changed-pack"
+    shutil.copytree(REPRODUCIBLE_FIXTURE_PACK, changed_pack)
+    changed_provenance = _read(changed_pack / "provenance.json")
+    changed_provenance["rows"][0]["evidence_references"][0]["quote"] = "changed evidence"
+    _write(changed_pack / "provenance.json", changed_provenance)
+    with pytest.raises(OpportunityReviewError, match="pack file hashes changed"):
+        apply_review_annotations(changed_pack, edited, tmp_path / "changed-review")
+    assert not (tmp_path / "changed-review").exists()
 
 
 def test_valid_apply_preserves_snapshot_and_links_revision(tmp_path: Path) -> None:
