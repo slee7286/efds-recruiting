@@ -14,6 +14,7 @@ from quant_recruiting.public_opportunity_batch import (
     CollectionLimits,
     PublicBatchError,
     PublicBatchManifest,
+    _programme_year,
     collect_public_batch,
     replay_saved_captures,
 )
@@ -293,6 +294,61 @@ def test_official_source_adapters_preserve_complete_and_partial_statuses(tmp_pat
         "records"
     ]
     assert len({record["record_id"] for record in records}) == len(records)
+
+
+def test_programme_year_requires_explicit_programme_wording() -> None:
+    assert _programme_year("Targeted Start Date Summer 2027") == (
+        "2027",
+        "Targeted Start Date Summer 2027",
+    )
+    assert _programme_year("Women in Trading & Technology Insight Programme - 2027") == (
+        "2027",
+        "Insight Programme - 2027",
+    )
+    assert _programme_year("2027 Shanghai Performance Researcher Summer Internship")[0] == "2027"
+    assert _programme_year("2027 Internship")[0] == "2027"
+    assert _programme_year("2027 Graduate")[0] == "2027"
+    assert _programme_year("Planning to graduate in 2027 or 2028") == (None, None)
+    assert _programme_year("Class of 2027 Summer Internship") == (None, None)
+    assert _programme_year("Posted in 2026; applications close in 2027") == (None, None)
+    assert _programme_year("Summer 2027 Internship and Summer 2028 Internship") == (None, None)
+
+
+def test_jane_graduation_year_is_not_a_programme_year(tmp_path: Path) -> None:
+    manifest = _official_manifest()
+    manifest["sources"] = [manifest["sources"][1]]
+    body = json.dumps(
+        [
+            {
+                "id": 8700980002,
+                "position": "Trading Desk Operations Engineer",
+                "city": "LDN",
+                "availability": "Summer Internship",
+                "category": "Trading, Research, and Machine Learning",
+                "duration": "June-September",
+                "overview": "Planning to graduate in 2027 or 2028, all backgrounds are welcome!",
+            }
+        ]
+    ).encode()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=body if request.url.path.endswith("main.json") else b"official",
+        )
+
+    _run(tmp_path, handler, manifest=manifest)
+    record = json.loads((tmp_path / "batch" / "digest-input.json").read_text())["sources"][0][
+        "records"
+    ][0]
+    assert record["raw_payload"]["derived"]["program"] == {
+        "category": "internship",
+        "wording": None,
+        "year": None,
+    }
+    assert "Planning to graduate in 2027 or 2028" in record["raw_payload"]["derived"][
+        "description"
+    ]
 
 
 def test_compatible_eligibility_dimensions_do_not_become_a_digest_conflict(
