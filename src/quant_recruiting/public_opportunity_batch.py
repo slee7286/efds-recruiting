@@ -27,7 +27,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from quant_recruiting.ats import adapter_for
-from quant_recruiting.jobs import JobPosting, classify_role, extract_internship_cycle
+from quant_recruiting.jobs import JobPosting, classify_role
 from quant_recruiting.opportunity_digest import (
     build_opportunity_digest,
     render_digest_json,
@@ -611,9 +611,31 @@ def _source_jobs(
 
 
 def _programme_year(text: str) -> tuple[str | None, str | None]:
-    year_match = re.search(r"\b(20(?:2[5-9]|3\d))\b", text)
-    if year_match:
-        return year_match.group(1), year_match.group(0)
+    """Extract a year only when the source labels it as programme metadata.
+
+    Graduation, class-of, posting, and other incidental dates are deliberately
+    excluded.  Multiple explicit programme years remain unknown rather than
+    silently selecting one; the original description is retained in the raw
+    payload for review.
+    """
+
+    year = r"20(?:2[5-9]|3\d)"
+    patterns = (
+        rf"^\s*({year})\s+graduate\b",
+        rf"^\s*({year})\s+(?!class\s+of\b|graduat\w*\b)[^\n,.!?;:]*\b(?:internship|intern|graduate|programme|program)\b",
+        rf"\b(?:summer|spring|autumn|fall)\s+({year})\s+(?:internship|intern|programme|program)\b",
+        rf"\b(?:internship|intern|insight\s+(?:days|programme|program)|programme|program)\s*(?:[-–:]|of|for)?\s*({year})\b",
+        rf"\btargeted\s+start\s+date\s+(?:summer|spring|autumn|fall)?\s*({year})\b",
+    )
+    matches: list[tuple[str, str]] = []
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, flags=re.IGNORECASE):
+            matches.append((match.group(1), match.group(0)))
+    distinct_years = {value for value, _wording in matches}
+    if len(distinct_years) == 1 and matches:
+        value = next(iter(distinct_years))
+        wording = next(wording for candidate, wording in matches if candidate == value)
+        return value, wording
     return None, None
 
 
@@ -716,9 +738,7 @@ def _record_from_posting(
     fallback_id = hashlib.sha256(posting.url.encode()).hexdigest()[:12]
     record_id = f"{source.source_id}-{posting.external_id or fallback_id}{record_id_suffix}"
     description = _clean_description(posting.description)
-    cycle, cycle_wording = extract_internship_cycle(f"{posting.title} {description}")
-    if cycle is None:
-        cycle, cycle_wording = _programme_year(f"{posting.title} {description}")
+    cycle, cycle_wording = _programme_year(f"{posting.title} {description}")
     role_family, _confidence = classify_role(posting.title, description)
     text = f"{posting.title} {description}".lower()
     if source.adapter in {"jane_official", "optiver_official"}:
