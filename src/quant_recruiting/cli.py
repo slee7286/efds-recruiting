@@ -543,6 +543,39 @@ def research_opportunity_review_apply(
     typer.echo(f"summary: {output / 'review-summary.md'}")
 
 
+@research_app.command("opportunity-review-pack")
+def research_opportunity_review_pack(
+    pack_dir: Path = typer.Argument(..., help="Explicit consolidated opportunity pack."),  # noqa: B008
+    verification_dir: Path = typer.Argument(..., help="Explicit saved verification run."),  # noqa: B008
+    reconciliation_dir: Path = typer.Argument(..., help="Explicit saved reconciliation evidence."),  # noqa: B008
+    output_dir: Path = typer.Argument(..., help="New output directory for the review pack."),  # noqa: B008
+    review_revision: Path | None = typer.Option(  # noqa: B008
+        None,
+        "--review-revision",
+        help="Optional valid offline review revision bound to the same consolidated pack.",
+    ),
+) -> None:
+    """Build a deterministic review pack from explicitly selected saved evidence."""
+
+    from quant_recruiting.opportunity_review_pack import (
+        OpportunityReviewPackError,
+        build_review_pack,
+    )
+
+    try:
+        output = build_review_pack(
+            pack_dir,
+            verification_dir,
+            reconciliation_dir,
+            output_dir,
+            review_revision=review_revision,
+        )
+    except OpportunityReviewPackError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    typer.echo(f"review pack: {output}")
+    typer.echo(f"manifest: {output / 'review-pack-manifest.json'}")
+
+
 @research_app.command("public-opportunity-batch")
 def research_public_opportunity_batch(
     manifest_path: Path = typer.Argument(..., help="Frozen public-source batch manifest."),  # noqa: B008
